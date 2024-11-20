@@ -1,3 +1,4 @@
+import numpy as np
 
 
 def weighted_field_mean(ds, lon="rlon", lat="rlat", weights=None):
@@ -36,7 +37,7 @@ def seasonal_mean(da):
     )
 
     # Test that the sum of the weights for each season is 1.0
-    #np.testing.assert_allclose(weights.groupby("time.season").sum().values, np.ones(4))
+    # np.testing.assert_allclose(weights.groupby("time.season").sum().values, np.ones(4))
 
     # Calculate the weighted average
     return (da * weights).groupby("time.season").sum(dim="time")
