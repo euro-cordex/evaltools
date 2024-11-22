@@ -2,11 +2,11 @@ import xarray as xr
 import numpy as np
 
 
-def eobs():
+def eobs(add_mask=True):
     """open EOBS dataset from LEAP
-    
+
     See also: https://catalog.leap.columbia.edu/feedstock/eobs-dataset
-    
+
     """
     store = "https://ncsa.osn.xsede.org/Pangeo/pangeo-forge/pangeo-forge/EOBS-feedstock/eobs-tg-tn-tx-rr-hu-pp.zarr"
 
@@ -25,10 +25,6 @@ def era5():
     store = (
         "gs://gcp-public-data-arco-era5/ar/1959-2022-full_37-1h-0p25deg-chunk-1.zarr-v2"
     )
-    ds = xr.open_zarr(
-        store,
-        chunks={"time": 48},
-        consolidated=True,
-    )
+    ds = xr.open_dataset(store, engine="zarr", chunks={})
     ds["mask"] = ds.land_sea_mask
     return ds
