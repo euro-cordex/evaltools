@@ -25,16 +25,35 @@ subregion_reference = reference_ds.sel(
     lat=slice(lat_min, lat_max), lon=slice(lon_min, lon_max)
 )
 
-# Compute the climatological annual or seasonal mean values
-model_clim = subregion_model.groupby("time.season").mean("time")
-reference_clim = subregion_reference.groupby("time.season").mean("time")
 
-# Spatially average these mean values over the subregion
-model_spatial_avg = model_clim.mean(dim=["lat", "lon"])
-reference_spatial_avg = reference_clim.mean(dim=["lat", "lon"])
+def compute_bias(model_ds, reference_ds):
+    """
+    Compute the BIAS between model and reference data.
 
-# Calculate the difference (BIAS)
-bias = model_spatial_avg - reference_spatial_avg
+    The BIAS is the difference between the spatially averaged climatological annual or seasonal mean values
+    of the model and reference datasets for a selected subregion. It quantifies the systematic error in the model
+    data compared to the reference data.
+
+    Parameters:
+    model_ds (xarray.DataArray): The model data with spatial dimensions.
+    reference_ds (xarray.DataArray): The reference data with spatial dimensions.
+
+    Returns:
+    xarray.DataArray: The BIAS value.
+    """
+    # Compute the climatological annual or seasonal mean values
+    model_clim = model_ds.groupby("time.season").mean("time")
+    reference_clim = reference_ds.groupby("time.season").mean("time")
+
+    # Spatially average these mean values over the subregion
+    model_spatial_avg = model_clim.mean(dim=["lat", "lon"])
+    reference_spatial_avg = reference_clim.mean(dim=["lat", "lon"])
+
+    # Calculate the difference (BIAS)
+    bias = model_spatial_avg - reference_spatial_avg
+
+    return bias
+
 
 # 95 %-P: the 95th percentile of all absolute grid cell dif-
 # ferences (model − reference) across a selected subre-
