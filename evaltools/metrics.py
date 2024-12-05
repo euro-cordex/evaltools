@@ -1,4 +1,5 @@
 # flake8: noqa
+# This code was developed with the assistance of GitHub Copilot.
 
 import xarray as xr
 import numpy as np
