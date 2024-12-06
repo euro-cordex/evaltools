@@ -1,8 +1,26 @@
 import xarray as xr
 import numpy as np
 
+eobs_mapping = {
+    "tg": "tas",
+    "tn": "tasmin",
+    "tx": "tasmax",
+    "rr": "pr",
+    "hu": "huss",
+    "pp": "ps",
+}
 
-def eobs(add_mask=True):
+era5_cf_mapping = {
+    "t2m": "tas",
+    "t2m_min": "tasmin",
+    "t2m_max": "tasmax",
+    "tp": "pr",
+    "q2": "huss",
+    "msl": "ps",
+}
+
+
+def eobs(add_mask=False, to_cf=False):
     """open EOBS dataset from LEAP
 
     See also: https://catalog.leap.columbia.edu/feedstock/eobs-dataset
@@ -18,13 +36,19 @@ def eobs(add_mask=True):
         # create a simple mask from missing values
         ds["mask"] = xr.where(~np.isnan(ds[mask_var].isel(time=0)), 1, 0)
 
+    if to_cf is True:
+        pass
+
     return ds
 
 
 def era5():
-    store = (
-        "gs://gcp-public-data-arco-era5/ar/1959-2022-full_37-1h-0p25deg-chunk-1.zarr-v2"
+    ds = xr.open_zarr(
+        # "gs://gcp-public-data-arco-era5/ar/1959-2022-full_37-1h-0p25deg-chunk-1.zarr-v2",
+        "gs://gcp-public-data-arco-era5/ar/full_37-1h-0p25deg-chunk-1.zarr-v3",
+        chunks=None,
+        storage_options=dict(token="anon"),
     )
-    ds = xr.open_dataset(store, engine="zarr", chunks={})
+    ds = ds.sel(time=slice(ds.attrs["valid_time_start"], ds.attrs["valid_time_stop"]))
     ds["mask"] = ds.land_sea_mask
     return ds
