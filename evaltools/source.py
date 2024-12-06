@@ -20,37 +20,49 @@ def open_catalog(url=None):
     return intake.open_esm_datastore(url)
 
 
-def get_source_collection(variable_id, frequency, fx=False, catalog=None):
+def get_source_collection(
+    variable_id, frequency, driving_source_id="ERA5", add_fx=False, catalog=None
+):
     """
-    Search the catalog for datasets matching the specified variable_id and frequency.
+    Search the catalog for datasets matching the specified variable_id, frequency, and driving_source_id.
 
     Parameters:
     variable_id (str): The variable ID to search for.
     frequency (str): The frequency to search for.
+    driving_source_id (str, optional): The driving source ID to search for. Defaults to "ERA5".
+    add_fx (bool, optional): Whether to add fixed variables. Defaults to False.
     catalog (intake.catalog, optional): The data catalog to search in. If None, open the default catalog.
 
     Returns:
     intake.catalog: The filtered data catalog.
     """
+    if add_fx is True:
+        pass
     if catalog is None:
         catalog = open_catalog()
     cat = catalog.search(
-        variable_id=variable_id, frequency=frequency, require_all_on=["source_id"]
+        variable_id=variable_id,
+        frequency=frequency,
+        driving_source_id=driving_source_id,
+        require_all_on=["source_id"],
     )
-    print(f"Found: {list(cat.df.source_id.unique())} for variables: {variable_id}")
+    source_ids = list(cat.df.source_id.unique())
+    print(f"Found: {source_ids} for variables: {variable_id}")
     return cat
 
 
 def open_and_sort(catalog, merge=False, concat=False, time_range="auto"):
     """
-    Convert the catalog to a dictionary of xarray datasets, sort them by source_id, and optionally merge the datasets.
+    Convert the catalog to a dictionary of xarray datasets, sort them by source_id, and optionally merge or concatenate the datasets.
 
     Parameters:
     catalog (intake.catalog): The data catalog to convert and sort.
-    merge (bool): Whether to merge the datasets for each source_id. Defaults to False.
+    merge (bool, optional): Whether to merge the datasets for each source_id. Defaults to False.
+    concat (bool, optional): Whether to concatenate the datasets along the source_id dimension. Defaults to False.
+    time_range (slice or str, optional): The time range to subset the datasets. Defaults to "auto".
 
     Returns:
-    dict: A dictionary of sorted (and optionally merged) xarray datasets.
+    dict or xarray.Dataset: A dictionary of sorted (and optionally merged) xarray datasets, or a concatenated xarray.Dataset.
     """
     if time_range == "auto":
         time_range = time_range_default
