@@ -1,5 +1,8 @@
 import xarray as xr
 import intake
+import pandas as pd
+
+from .utils import iid_to_dict, dict_to_iid
 
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
 time_range_default = slice("1979", "2020")
@@ -36,59 +39,68 @@ def get_source_collection(
     Returns:
     intake.catalog: The filtered data catalog.
     """
-    if add_fx is True:
-        pass
     if catalog is None:
         catalog = open_catalog()
-    cat = catalog.search(
+    subset = catalog.search(
         variable_id=variable_id,
         frequency=frequency,
         driving_source_id=driving_source_id,
         require_all_on=["source_id"],
     )
-    source_ids = list(cat.df.source_id.unique())
+    source_ids = list(subset.df.source_id.unique())
     print(f"Found: {source_ids} for variables: {variable_id}")
-    return cat
+    if add_fx is True:
+        fx = catalog.search(source_id=source_ids, frequency="fx")
+        subset.esmcat._df = pd.concat([subset.df, fx.df])
+    return subset
 
 
-def open_and_sort(catalog, merge=False, concat=False, time_range="auto"):
+def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
     """
     Convert the catalog to a dictionary of xarray datasets, sort them by source_id, and optionally merge or concatenate the datasets.
 
     Parameters:
     catalog (intake.catalog): The data catalog to convert and sort.
-    merge (bool, optional): Whether to merge the datasets for each source_id. Defaults to False.
+    merge (bool, optional): Whether to merge the datasets for each source_id. Defaults to None.
     concat (bool, optional): Whether to concatenate the datasets along the source_id dimension. Defaults to False.
     time_range (slice or str, optional): The time range to subset the datasets. Defaults to "auto".
 
     Returns:
     dict or xarray.Dataset: A dictionary of sorted (and optionally merged) xarray datasets, or a concatenated xarray.Dataset.
     """
+    if concat is True and not merge:
+        merge = True
+    if merge is True:
+        merge = ["variable_id", "frequency"]
+
+    id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
+
     if time_range == "auto":
         time_range = time_range_default
-    if concat is True:
-        merge = True
-    source_ids = list(catalog.df.source_id.unique())
+
     dsets = catalog.to_dataset_dict(xarray_open_kwargs=xarray_open_kwargs)
     print(f"Found {len(dsets)} datasets")
-    sorted = {}
-    for source_id in source_ids:
-        sorted[source_id] = [
-            dsets[key] for key in dsets if dsets[key].attrs["source_id"] == source_id
-        ]
+
     if time_range is not None:
-        for source_id in source_ids:
-            print(f"subsetting: {source_id}")
-            for i, ds in enumerate(sorted[source_id]):
-                if "time" in ds.dims:
-                    sorted[source_id][i] = ds.sel(time=time_range)
-    if merge is True:
-        for source_id in source_ids:
-            print(f"merging: {source_id}")
-            sorted[source_id] = xr.merge(sorted[source_id])
+        for iid, ds in dsets.items():
+            if "time" in ds.dims:
+                dsets[iid] = ds.sel(time=time_range)
+    if merge:
+        sorted = {
+            dict_to_iid(iid_to_dict(iid, id_attrs), drop=merge): []
+            for iid in catalog.keys()
+        }
+        # Merge variable_ids
+        for iid, ds in dsets.items():
+            new_iid = dict_to_iid(iid_to_dict(iid, id_attrs), drop=merge)
+            sorted[new_iid].append(ds)
+        for iid, dss in sorted.items():
+            print(f"merging: {iid}")
+            sorted[iid] = xr.merge(dss, compat="override")
+        dsets = sorted
     if concat is True:
-        ids = list(sorted.keys())
-        concat_dim = xr.DataArray(ids, dims="source_id", name="source_id")
+        ids = list(dsets.keys())
+        concat_dim = xr.DataArray(ids, dims="iid", name="iid")
         return xr.concat(
             list(sorted.values()),
             dim=concat_dim,
@@ -96,4 +108,4 @@ def open_and_sort(catalog, merge=False, concat=False, time_range="auto"):
             coords="minimal",
             join="override",
         )
-    return sorted
+    return dsets
