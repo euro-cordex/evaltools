@@ -1,35 +1,111 @@
 import numpy as np
+import xarray as xr
+
+
+def regional_mean(ds, regions):
+    """
+    Compute the regional mean of a dataset over specified regions.
+
+    Parameters:
+    ds (xarray.Dataset): The dataset to compute the regional mean for.
+    regions (regionmask.Regions): The regions to compute the mean over.
+
+    Returns:
+    xarray.Dataset: The regional mean values.
+    """
+    mask = regions.mask_3D(ds.lon, ds.lat, drop=False)
+    weights = 1.0  # np.cos(np.deg2rad(ds.lat))
+    return ds.cf.weighted(mask * weights).mean(dim=("X", "Y"))
+
+
+def regional_means(dsets, regions):
+    """
+    Compute the regional means for multiple datasets over specified regions.
+
+    Parameters:
+    dsets (dict): A dictionary of datasets to compute the regional means for.
+    regions (regionmask.Regions): The regions to compute the means over.
+
+    Returns:
+    xarray.Dataset: The concatenated regional mean values for all datasets.
+    """
+    concat_dim = xr.DataArray(list(dsets.keys()), dims="iid", name="iid")
+    return xr.concat(
+        [regional_mean(ds, regions) for ds in dsets.values()],
+        dim=concat_dim,
+        coords="minimal",
+    )
 
 
 def weighted_field_mean(ds, lon="rlon", lat="rlat", weights=None):
-    """function to compute area-weighted spatial means"""
+    """
+    Compute the area-weighted spatial mean of a dataset.
+
+    Parameters:
+    ds (xarray.Dataset): The dataset to compute the weighted mean for.
+    lon (str, optional): The name of the longitude dimension. Defaults to "rlon".
+    lat (str, optional): The name of the latitude dimension. Defaults to "rlat".
+    weights (xarray.DataArray, optional): The weights to use for the mean. Defaults to None.
+
+    Returns:
+    xarray.Dataset: The area-weighted spatial mean values.
+    """
     if weights is None:
         weights = np.cos(np.deg2rad(ds[lat]))
     return ds.weighted(weights).mean(dim=(lon, lat))
 
 
 def daily_sum(da):
-    """Function to compute daily sums with a simple groupby approach"""
+    """
+    Compute daily sums of a DataArray using a simple groupby approach.
+
+    Parameters:
+    da (xarray.DataArray): The DataArray to compute daily sums for.
+
+    Returns:
+    xarray.DataArray: The daily sum values.
+    """
     return da.groupby("time.day").sum(dim="time")
 
 
 def monthly_sum(da):
-    """Function to compute dailymonthly means with a simple groupby approach"""
+    """
+    Compute monthly means of a DataArray using a simple groupby approach.
+
+    Parameters:
+    da (xarray.DataArray): The DataArray to compute monthly means for.
+
+    Returns:
+    xarray.DataArray: The monthly mean values.
+    """
     return da.groupby("time.month").mean(dim="time")
 
 
 def height_correction(height1, height2):
-    """returns height correction in m"""
+    """
+    Compute the height correction in meters between two heights.
+
+    Parameters:
+    height1 (float): The first height in meters.
+    height2 (float): The second height in meters.
+
+    Returns:
+    float: The height correction in meters.
+    """
     return (height1 - height2) * 0.0065
 
 
 def seasonal_mean(da):
-    """Optimized function to calculate seasonal averages from time series of monthly means
-
-    based on: https://xarray.pydata.org/en/stable/examples/monthly-means.html
     """
+    Calculate seasonal averages from a time series of monthly means.
 
-    # Get number od days for each month
+    Parameters:
+    da (xarray.DataArray): The DataArray to compute seasonal means for.
+
+    Returns:
+    xarray.DataArray: The seasonal mean values.
+    """
+    # Get number of days for each month
     month_length = da.time.dt.days_in_month
     # Calculate the weights by grouping by 'time.season'.
     weights = (
@@ -45,12 +121,21 @@ def seasonal_mean(da):
 
 def get_regridder(finer, coarser, method="bilinear", **kwargs):
     """
-    Function to regrid data bilinearly to a coarser grid
-    """
+    Regrid data bilinearly to a coarser grid.
 
+    Parameters:
+    finer (xarray.Dataset): The dataset to regrid.
+    coarser (xarray.Dataset): The target grid dataset.
+    method (str, optional): The regridding method to use. Defaults to "bilinear".
+    **kwargs: Additional keyword arguments to pass to the regridding function.
+
+    Returns:
+    xesmf.Regridder: The regridder object.
+    """
     import xesmf as xe
 
-    return xe.Regridder(finer, coarser, method=method, **kwargs)
+    regridder = xe.Regridder(finer, coarser, method, **kwargs)
+    return regridder
 
 
 def compare_seasons(
