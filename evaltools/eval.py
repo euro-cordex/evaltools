@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 
 
-def regional_mean(ds, regions):
+def regional_mean(ds, regions=None, weights=None):
     """
     Compute the regional mean of a dataset over specified regions.
 
@@ -13,12 +13,16 @@ def regional_mean(ds, regions):
     Returns:
     xarray.Dataset: The regional mean values.
     """
-    mask = regions.mask_3D(ds.lon, ds.lat, drop=False)
-    weights = 1.0  # np.cos(np.deg2rad(ds.lat))
+    mask = 1.0
+    if weights is None:
+        weights = xr.ones_like(ds.lon)
+    if regions:
+        mask = regions.mask_3D(ds.lon, ds.lat, drop=False)
+
     return ds.cf.weighted(mask * weights).mean(dim=("X", "Y"))
 
 
-def regional_means(dsets, regions):
+def regional_means(dsets, regions=None):
     """
     Compute the regional means for multiple datasets over specified regions.
 
@@ -34,6 +38,7 @@ def regional_means(dsets, regions):
         [regional_mean(ds, regions) for ds in dsets.values()],
         dim=concat_dim,
         coords="minimal",
+        compat="override",
     )
 
 

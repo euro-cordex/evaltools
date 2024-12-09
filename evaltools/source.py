@@ -1,6 +1,7 @@
 import xarray as xr
 import intake
 import pandas as pd
+from warnings import warn
 
 from .utils import iid_to_dict, dict_to_iid
 
@@ -24,7 +25,7 @@ def open_catalog(url=None):
 
 
 def get_source_collection(
-    variable_id, frequency, driving_source_id="ERA5", add_fx=False, catalog=None
+    variable_id, frequency, driving_source_id="ERA5", add_fx=None, catalog=None
 ):
     """
     Search the catalog for datasets matching the specified variable_id, frequency, and driving_source_id.
@@ -39,6 +40,8 @@ def get_source_collection(
     Returns:
     intake.catalog: The filtered data catalog.
     """
+    if add_fx is None:
+        add_fx = "areacella"
     if catalog is None:
         catalog = open_catalog()
     subset = catalog.search(
@@ -49,8 +52,15 @@ def get_source_collection(
     )
     source_ids = list(subset.df.source_id.unique())
     print(f"Found: {source_ids} for variables: {variable_id}")
-    if add_fx is True:
-        fx = catalog.search(source_id=source_ids, frequency="fx")
+    if add_fx:
+        if add_fx is True:
+            fx = catalog.search(source_id=source_ids, frequency="fx")
+        else:
+            fx = catalog.search(
+                source_id=source_ids, frequency="fx", variable_id=add_fx
+            )
+            if fx.df.empty:
+                warn(f"static variables not found: {variable_id}")
         subset.esmcat._df = pd.concat([subset.df, fx.df])
     return subset
 
