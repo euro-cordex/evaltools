@@ -3,7 +3,7 @@ import intake
 import pandas as pd
 from warnings import warn
 
-from .utils import iid_to_dict, dict_to_iid
+from .utils import iid_to_dict, dict_to_iid, mask_with_sftlf, add_bounds
 
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
 time_range_default = slice("1979", "2020")
@@ -118,4 +118,16 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
             coords="minimal",
             join="override",
         )
+    return dsets
+
+
+def open_datasets(variables, frequency="mon", mask=True, add_missing_bounds=True):
+    catalog = get_source_collection(variables, frequency, add_fx=["areacella", "sftlf"])
+    dsets = open_and_sort(catalog, merge=True)
+    if mask is True:
+        for ds in dsets.values():
+            mask_with_sftlf(ds)
+    if add_missing_bounds is True:
+        for dset_id, ds in dsets.items():
+            dsets[dset_id] = add_bounds(ds)
     return dsets

@@ -1,7 +1,22 @@
 from collections import defaultdict
 
 
-def iid_to_dict(dset_id, attrs):
+default_attrs = [
+    "project_id",
+    "domain_id",
+    "institution_id",
+    "driving_source_id",
+    "driving_experiment_id",
+    "driving_variant_label",
+    "source_id",
+    "version_realization",
+    #'frequency',
+    #'variable_id',
+    "version",
+]
+
+
+def iid_to_dict(iid, attrs=None):
     """
     Convert a dataset ID and its attributes to a dictionary.
 
@@ -12,7 +27,9 @@ def iid_to_dict(dset_id, attrs):
     Returns:
     dict: The dataset ID and attributes as a dictionary.
     """
-    values = dset_id.split(".")
+    if attrs is None:
+        attrs = default_attrs
+    values = iid.split(".")
     return dict(zip(attrs, values))
 
 
@@ -29,6 +46,22 @@ def dict_to_iid(attrs, drop=None):
     if drop is None:
         drop = []
     return ".".join(v for k, v in attrs.items() if k not in drop)
+
+
+def short_iid(iid, attrs=None):
+    """
+    Convert a dataset ID to a short ID.
+
+    Parameters:
+    iid (str): The dataset ID.
+    attrs (dict): The dataset attributes.
+
+    Returns:
+    str: The short ID.
+    """
+    if attrs is None:
+        attrs = ["institution_id", "source_id", "driving_source_id", "experiment_id"]
+    return dict_to_iid({k: v for k, v in iid_to_dict(iid).items() if k in attrs})
 
 
 def sort_by_grid_mapping(dsets):
