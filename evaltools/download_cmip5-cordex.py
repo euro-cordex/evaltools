@@ -31,7 +31,7 @@ def get_urls(vardic, nodeURL, ires=0):
     conn = SearchConnection(nodeURL, distrib=True)
     ctx = conn.new_context(**vardic)
     results = ctx.search(batch_size=200)
-    dids = [result.dataset_id for result in results]
+    # dids = [result.dataset_id for result in results]
     # print(dids)
     files = results[ires].file_context().search()
     return [file.opendap_url for file in files]
@@ -124,7 +124,7 @@ def download_datasetid_ESGF(dataset_id, nodeURL, dest):
 
         # ejecute wget
         os.chmod(script_path, 0o750)
-        download_dir = os.path.dirname(script_path)
+        # download_dir = os.path.dirname(script_path)
         subprocess.check_output(
             ["bash", "{}".format(script_path), "-s"], cwd=target_dir
         )
