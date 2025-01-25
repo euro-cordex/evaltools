@@ -26,7 +26,12 @@ def open_catalog(url=None):
 
 
 def get_source_collection(
-    variable_id, frequency, driving_source_id="ERA5", add_fx=None, catalog=None
+    variable_id,
+    frequency,
+    driving_source_id="ERA5",
+    add_fx=None,
+    catalog=None,
+    **kwargs,
 ):
     """
     Search the catalog for datasets matching the specified variable_id, frequency, and driving_source_id.
@@ -50,15 +55,16 @@ def get_source_collection(
         frequency=frequency,
         driving_source_id=driving_source_id,
         require_all_on=["source_id"],
+        **kwargs,
     )
     source_ids = list(subset.df.source_id.unique())
     print(f"Found: {source_ids} for variables: {variable_id}")
     if add_fx:
         if add_fx is True:
-            fx = catalog.search(source_id=source_ids, frequency="fx")
+            fx = catalog.search(source_id=source_ids, frequency="fx", **kwargs)
         else:
             fx = catalog.search(
-                source_id=source_ids, frequency="fx", variable_id=add_fx
+                source_id=source_ids, frequency="fx", variable_id=add_fx, **kwargs
             )
             if fx.df.empty:
                 warn(f"static variables not found: {variable_id}")

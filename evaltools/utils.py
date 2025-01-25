@@ -33,7 +33,7 @@ def iid_to_dict(iid, attrs=None):
     return dict(zip(attrs, values))
 
 
-def dict_to_iid(attrs, drop=None):
+def dict_to_iid(attrs, drop=None, delimiter="."):
     """
     Convert a dictionary of dataset attributes to a dataset ID.
 
@@ -45,10 +45,10 @@ def dict_to_iid(attrs, drop=None):
     """
     if drop is None:
         drop = []
-    return ".".join(v for k, v in attrs.items() if k not in drop)
+    return delimiter.join(v for k, v in attrs.items() if k not in drop)
 
 
-def short_iid(iid, attrs=None):
+def short_iid(iid, attrs=None, delimiter="."):
     """
     Convert a dataset ID to a short ID.
 
@@ -61,7 +61,9 @@ def short_iid(iid, attrs=None):
     """
     if attrs is None:
         attrs = ["institution_id", "source_id", "driving_source_id", "experiment_id"]
-    return dict_to_iid({k: v for k, v in iid_to_dict(iid).items() if k in attrs})
+    return dict_to_iid(
+        {k: v for k, v in iid_to_dict(iid).items() if k in attrs}, delimiter=delimiter
+    )
 
 
 def sort_by_grid_mapping(dsets):
