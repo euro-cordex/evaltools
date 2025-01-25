@@ -4,6 +4,7 @@ import pandas as pd
 from warnings import warn
 
 from .utils import iid_to_dict, dict_to_iid
+from .eval import mask_with_sftlf, add_bounds
 
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
 time_range_default = slice("1979", "2020")
@@ -25,7 +26,12 @@ def open_catalog(url=None):
 
 
 def get_source_collection(
-    variable_id, frequency, driving_source_id="ERA5", add_fx=None, catalog=None
+    variable_id,
+    frequency,
+    driving_source_id="ERA5",
+    add_fx=None,
+    catalog=None,
+    **kwargs,
 ):
     """
     Search the catalog for datasets matching the specified variable_id, frequency, and driving_source_id.
@@ -49,15 +55,16 @@ def get_source_collection(
         frequency=frequency,
         driving_source_id=driving_source_id,
         require_all_on=["source_id"],
+        **kwargs,
     )
     source_ids = list(subset.df.source_id.unique())
     print(f"Found: {source_ids} for variables: {variable_id}")
     if add_fx:
         if add_fx is True:
-            fx = catalog.search(source_id=source_ids, frequency="fx")
+            fx = catalog.search(source_id=source_ids, frequency="fx", **kwargs)
         else:
             fx = catalog.search(
-                source_id=source_ids, frequency="fx", variable_id=add_fx
+                source_id=source_ids, frequency="fx", variable_id=add_fx, **kwargs
             )
             if fx.df.empty:
                 warn(f"static variables not found: {variable_id}")
@@ -118,4 +125,16 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
             coords="minimal",
             join="override",
         )
+    return dsets
+
+
+def open_datasets(variables, frequency="mon", mask=True, add_missing_bounds=True):
+    catalog = get_source_collection(variables, frequency, add_fx=["areacella", "sftlf"])
+    dsets = open_and_sort(catalog, merge=True)
+    if mask is True:
+        for ds in dsets.values():
+            mask_with_sftlf(ds)
+    if add_missing_bounds is True:
+        for dset_id, ds in dsets.items():
+            dsets[dset_id] = add_bounds(ds)
     return dsets
