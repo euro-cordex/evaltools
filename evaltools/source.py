@@ -3,7 +3,8 @@ import intake
 import pandas as pd
 from warnings import warn
 
-from .utils import iid_to_dict, dict_to_iid, mask_with_sftlf, add_bounds
+from .utils import iid_to_dict, dict_to_iid
+from .eval import mask_with_sftlf, add_bounds
 
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
 time_range_default = slice("1979", "2020")
