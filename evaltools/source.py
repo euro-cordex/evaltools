@@ -8,6 +8,7 @@ from .eval import mask_with_sftlf, add_bounds
 
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
 
+
 def open_catalog(url=None):
     """
     Open a data catalog from a given URL. If no URL is provided, use the default URL.
