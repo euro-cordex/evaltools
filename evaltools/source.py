@@ -7,8 +7,6 @@ from .utils import iid_to_dict, dict_to_iid
 from .eval import mask_with_sftlf, add_bounds
 
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
-time_range_default = slice("1979", "2020")
-
 
 def open_catalog(url=None):
     """
@@ -85,11 +83,6 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
     Returns:
     dict or xarray.Dataset: A dictionary of sorted (and optionally merged) xarray datasets, or a concatenated xarray.Dataset.
     """
-    if concat is True and not merge:
-        merge = True
-    if merge is True:
-        merge = ["variable_id", "frequency"]
-
     id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
 
     if time_range == "auto":
