@@ -5,9 +5,9 @@ from warnings import warn
 
 from .utils import iid_to_dict, dict_to_iid
 from .eval import mask_with_sftlf, add_bounds
+from .config import time_range_default
 
-xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
-time_range_default = slice("1979", "2020")
+xarray_open_kwargs = {"use_cftime": True, "chunks": None}
 
 
 def open_catalog(url=None):
@@ -21,14 +21,11 @@ def open_catalog(url=None):
     intake.catalog: The opened data catalog.
     """
     if url is None:
-        url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/main/CORDEX-CMIP6.json"
+        url = "/home/lbuntemeyer/python/joint-evaluation/CORDEX-CMIP6.json"
     return intake.open_esm_datastore(url)
 
 
 def get_source_collection(
-    variable_id,
-    frequency,
-    driving_source_id="ERA5",
     add_fx=None,
     catalog=None,
     **kwargs,
@@ -51,23 +48,21 @@ def get_source_collection(
     if catalog is None:
         catalog = open_catalog()
     subset = catalog.search(
-        variable_id=variable_id,
-        frequency=frequency,
-        driving_source_id=driving_source_id,
         require_all_on=["source_id"],
         **kwargs,
     )
     source_ids = list(subset.df.source_id.unique())
-    print(f"Found: {source_ids} for variables: {variable_id}")
+    print(f"Found: {source_ids}")
     if add_fx:
+        kwargs["frequency"] = "fx"
         if add_fx is True:
-            fx = catalog.search(source_id=source_ids, frequency="fx", **kwargs)
+            # add all static variables
+            fx = catalog.search(source_id=source_ids, **kwargs)
         else:
-            fx = catalog.search(
-                source_id=source_ids, frequency="fx", variable_id=add_fx, **kwargs
-            )
+            kwargs["variable_id"] = add_fx
+            fx = catalog.search(source_id=source_ids, **kwargs)
             if fx.df.empty:
-                warn(f"static variables not found: {variable_id}")
+                warn(f"static variables not found: {add_fx}")
         subset.esmcat._df = pd.concat([subset.df, fx.df])
     return subset
 
@@ -88,8 +83,8 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
     if concat is True and not merge:
         merge = True
     if merge is True:
-        merge = ["variable_id", "frequency"]
-
+        merge = ["frequency"]
+    #
     id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
 
     if time_range == "auto":
@@ -97,6 +92,9 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
 
     dsets = catalog.to_dataset_dict(xarray_open_kwargs=xarray_open_kwargs)
     print(f"Found {len(dsets)} datasets")
+
+    for dset_id, ds in dsets.items():
+        dsets[dset_id] = xr.decode_cf(ds, decode_coords="all")
 
     if time_range is not None:
         for iid, ds in dsets.items():

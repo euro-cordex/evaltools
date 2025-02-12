@@ -37,7 +37,15 @@ def eobs(add_mask=False, to_cf=False):
         ds["mask"] = xr.where(~np.isnan(ds[mask_var].isel(time=0)), 1, 0)
 
     if to_cf is True:
-        pass
+        ds = ds.rename_vars(eobs_mapping)
+        for var in ds.data_vars:
+            units = ds[var].attrs["units"]
+            if units == "Celsius":
+                ds[var] += 273.15
+                ds[var].attrs["units"] = "K"
+            if units == "mm":
+                ds[var] *= 86400
+                ds[var].attrs["units"] = "kg m-2 h-1"
 
     return ds
 

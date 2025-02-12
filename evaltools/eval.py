@@ -6,7 +6,7 @@ import xesmf as xe
 from warnings import warn
 
 
-def regional_mean(ds, regions=None, weights=None):
+def regional_mean(ds, regions=None, weights=None, region_name="region"):
     """
     Compute the regional mean of a dataset over specified regions.
 
@@ -18,12 +18,17 @@ def regional_mean(ds, regions=None, weights=None):
     xarray.Dataset: The regional mean values.
     """
     mask = 1.0
+    lon = ds.cf["longitude"]
+    lat = ds.cf["latitude"]
     if weights is None:
-        weights = xr.ones_like(ds.lon)
+        weights = xr.ones_like(lon)
     if regions:
-        mask = regions.mask_3D(ds.lon, ds.lat, drop=False)
+        mask = regions.mask_3D(lon, lat, drop=False)
 
-    return ds.cf.weighted(mask * weights).mean(dim=("X", "Y"))
+    mean = ds.cf.weighted(mask * weights).mean(dim=("X", "Y"))
+    if region_name == "region":
+        mean["region"] = mean.names
+    return mean
 
 
 def regional_means(dsets, regions=None):
@@ -38,8 +43,13 @@ def regional_means(dsets, regions=None):
     xarray.Dataset: The concatenated regional mean values for all datasets.
     """
     concat_dim = xr.DataArray(list(dsets.keys()), dims="iid", name="iid")
+    means = []
+    for dset_id, ds in dsets.items():
+        print(f"creating regional mean for: {dset_id}")
+        means.append(regional_mean(ds, regions))
+
     return xr.concat(
-        [regional_mean(ds, regions) for ds in dsets.values()],
+        means,
         dim=concat_dim,
         coords="minimal",
         compat="override",
