@@ -1,21 +1,6 @@
 from collections import defaultdict
 
 
-default_attrs = [
-    "project_id",
-    "domain_id",
-    "institution_id",
-    "driving_source_id",
-    "driving_experiment_id",
-    "driving_variant_label",
-    "source_id",
-    "version_realization",
-    #'frequency',
-    #'variable_id',
-    "version",
-]
-
-
 def iid_to_dict(iid, attrs=None):
     """
     Convert a dataset ID and its attributes to a dictionary.
@@ -27,8 +12,6 @@ def iid_to_dict(iid, attrs=None):
     Returns:
     dict: The dataset ID and attributes as a dictionary.
     """
-    if attrs is None:
-        attrs = default_attrs
     values = iid.split(".")
     return dict(zip(attrs, values))
 
@@ -48,7 +31,7 @@ def dict_to_iid(attrs, drop=None, delimiter="."):
     return delimiter.join(v for k, v in attrs.items() if k not in drop)
 
 
-def short_iid(iid, attrs=None, delimiter="."):
+def short_iid(iid, attrs=None, delimiter=".", default_attrs=None):
     """
     Convert a dataset ID to a short ID.
 
@@ -62,7 +45,8 @@ def short_iid(iid, attrs=None, delimiter="."):
     if attrs is None:
         attrs = ["institution_id", "source_id", "driving_source_id", "experiment_id"]
     return dict_to_iid(
-        {k: v for k, v in iid_to_dict(iid).items() if k in attrs}, delimiter=delimiter
+        {k: v for k, v in iid_to_dict(iid, default_attrs).items() if k in attrs},
+        delimiter=delimiter,
     )
 
 

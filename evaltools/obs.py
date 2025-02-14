@@ -20,7 +20,7 @@ era5_cf_mapping = {
 }
 
 
-def eobs(add_mask=False, to_cf=False):
+def eobs(variable, add_mask=False, to_cf=False):
     """open EOBS dataset from LEAP
 
     See also: https://catalog.leap.columbia.edu/feedstock/eobs-dataset
@@ -30,7 +30,7 @@ def eobs(add_mask=False, to_cf=False):
 
     ds = xr.open_dataset(store, engine="zarr", chunks={})
 
-    mask_var = "tg"
+    mask_var = [key for key, value in eobs_mapping.items() if value == variable][0]
 
     if add_mask is True:
         # create a simple mask from missing values
