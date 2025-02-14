@@ -2,7 +2,6 @@ import numpy as np
 import xarray as xr
 import cordex as cx
 import cf_xarray as cfxr
-import xesmf as xe
 from warnings import warn
 
 
@@ -195,6 +194,8 @@ def create_regridder(source, target, method="bilinear"):
     xesmf.Regridder
         The regridder object.
     """
+    import xesmf as xe
+    
     regridder = xe.Regridder(source, target, method=method)
     return regridder
 
