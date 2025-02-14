@@ -195,7 +195,7 @@ def create_regridder(source, target, method="bilinear"):
         The regridder object.
     """
     import xesmf as xe
-    
+
     regridder = xe.Regridder(source, target, method=method)
     return regridder
 
