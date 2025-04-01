@@ -6,8 +6,9 @@ from warnings import warn
 from .utils import iid_to_dict, dict_to_iid
 from .eval import mask_with_sftlf, add_bounds
 
-xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": None}
+xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": {}}
 time_range_default = slice("1979", "2020")
+xr.set_options(keep_attrs=True)
 
 
 def open_catalog(url=None):
@@ -72,7 +73,7 @@ def get_source_collection(
     return subset
 
 
-def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
+def open_and_sort(catalog, merge_fx=False, concat=False, time_range="auto"):
     """
     Convert the catalog to a dictionary of xarray datasets, sort them by source_id, and optionally merge or concatenate the datasets.
 
@@ -85,12 +86,8 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
     Returns:
     dict or xarray.Dataset: A dictionary of sorted (and optionally merged) xarray datasets, or a concatenated xarray.Dataset.
     """
-    if concat is True and not merge:
-        merge = True
-    if merge is True:
-        merge = ["variable_id", "frequency"]
-
-    id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
+    if concat is True and not merge_fx:
+        merge_fx = True
 
     if time_range == "auto":
         time_range = time_range_default
@@ -102,19 +99,26 @@ def open_and_sort(catalog, merge=None, concat=False, time_range="auto"):
         for iid, ds in dsets.items():
             if "time" in ds.dims:
                 dsets[iid] = ds.sel(time=time_range)
-    if merge:
-        sorted = {
-            dict_to_iid(iid_to_dict(iid, id_attrs), drop=merge): []
-            for iid in catalog.keys()
-        }
-        # Merge variable_ids
+
+    if merge_fx is True:
+        id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
+        # Merge fx datasets
+        freq = "frequency"
+        dsets_merged = {}
+        # Merge
         for iid, ds in dsets.items():
-            new_iid = dict_to_iid(iid_to_dict(iid, id_attrs), drop=merge)
-            sorted[new_iid].append(ds)
-        for iid, dss in sorted.items():
-            print(f"merging: {iid}")
-            sorted[iid] = xr.merge(dss, compat="override")
-        dsets = sorted
+            attrs = iid_to_dict(iid, id_attrs)
+            if attrs[freq] != "fx":
+                fx_iid = dict_to_iid(attrs | {"frequency": "fx"})
+                if fx_iid in dsets:
+                    print(f"merging {iid} with {fx_iid}")
+                    dsets_merged[iid] = xr.merge(
+                        [ds, dsets[fx_iid]],
+                        compat="override",
+                        join="override",
+                        combine_attrs="override",
+                    )
+        dsets = dsets_merged
     if concat is True:
         ids = list(dsets.keys())
         concat_dim = xr.DataArray(ids, dims="iid", name="iid")
