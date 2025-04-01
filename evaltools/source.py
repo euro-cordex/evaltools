@@ -6,7 +6,7 @@ from warnings import warn
 from .utils import iid_to_dict, dict_to_iid
 from .eval import mask_with_sftlf, add_bounds
 
-xarray_open_kwargs = {"use_cftime": True, "decode_coords": "all", "chunks": {}}
+xarray_open_kwargs = {"use_cftime": True, "decode_coords": None, "chunks": {}}
 time_range_default = slice("1979", "2020")
 xr.set_options(keep_attrs=True)
 
@@ -93,6 +93,9 @@ def open_and_sort(catalog, merge_fx=False, concat=False, time_range="auto"):
         time_range = time_range_default
 
     dsets = catalog.to_dataset_dict(xarray_open_kwargs=xarray_open_kwargs)
+    for iid, ds in dsets.items():
+        dsets[iid] = xr.decode_cf(ds, decode_coords="all")
+
     print(f"Found {len(dsets)} datasets")
 
     if time_range is not None:
