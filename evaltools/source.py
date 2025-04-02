@@ -1,7 +1,7 @@
 import xarray as xr
 import intake
 import pandas as pd
-from warnings import warn
+import warnings
 
 from .utils import iid_to_dict, dict_to_iid
 from .eval import mask_with_sftlf, add_bounds
@@ -89,7 +89,7 @@ def get_source_collection(
                 source_id=source_ids, frequency="fx", variable_id=add_fx, **kwargs
             )
             if fx.df.empty:
-                warn(f"static variables not found: {variable_id}")
+                warnings.warn(f"static variables not found: {variable_id}")
         subset.esmcat._df = pd.concat([subset.df, fx.df])
     return subset
 
@@ -127,9 +127,18 @@ def open_and_sort(
     dsets = catalog.to_dataset_dict(xarray_open_kwargs=xarray_open_kwargs)
 
     for iid, ds in dsets.items():
-        dsets[iid] = xr.decode_cf(ds, decode_coords="all")
+        print("decoding dataset", iid)
+        # Check for warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")  # Catch all warnings
+            dsets[iid] = xr.decode_cf(ds, decode_coords="all")  # Call the function
 
-    print(f"Found {len(dsets)} datasets")
+            # Check if any warnings were raised
+            if w:
+                for warning in w:
+                    print(f"Warning for {iid}: {warning.message}")
+
+            print(f"Found {len(dsets)} datasets")
 
     fixed_dsets = {}
 
@@ -138,7 +147,7 @@ def open_and_sort(
             fixed_dsets[iid] = ds.sel(time=time_range)
         if apply_fixes:
             try:
-                fixed_dsets[iid] = check_and_fix(ds)
+                fixed_dsets[iid] = check_and_fix(ds, iid)
             except FixException as e:
                 print(f"Fix failed for {iid}: {e}")
                 print(f"Dataset {iid} will be ignored...")
