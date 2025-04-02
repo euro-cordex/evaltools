@@ -5,9 +5,16 @@ from warnings import warn
 
 from .utils import iid_to_dict, dict_to_iid
 from .eval import mask_with_sftlf, add_bounds
+from .fix import check_and_fix, FixException
 
+# we use cftime for time handling
+# do not decode coords by default since open_mfdataset might lose encoding
+# see, e.g., https://github.com/pydata/xarray/issues/2436#issuecomment-449737841
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": None, "chunks": {}}
+
+# default time range for the evaluation
 time_range_default = slice("1979", "2020")
+
 xr.set_options(keep_attrs=True)
 
 
@@ -15,11 +22,15 @@ def open_catalog(url=None):
     """
     Open a data catalog from a given URL. If no URL is provided, use the default URL.
 
-    Parameters:
-    url (str, optional): The URL of the data catalog. Defaults to None.
+    Parameters
+    ----------
+    url : str, optional
+        The URL of the data catalog. Defaults to None.
 
-    Returns:
-    intake.catalog: The opened data catalog.
+    Returns
+    -------
+    intake.catalog
+        The opened data catalog.
     """
     if url is None:
         url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/main/CORDEX-CMIP6.json"
@@ -37,15 +48,25 @@ def get_source_collection(
     """
     Search the catalog for datasets matching the specified variable_id, frequency, and driving_source_id.
 
-    Parameters:
-    variable_id (str): The variable ID to search for.
-    frequency (str): The frequency to search for.
-    driving_source_id (str, optional): The driving source ID to search for. Defaults to "ERA5".
-    add_fx (bool, optional): Whether to add fixed variables. Defaults to False.
-    catalog (intake.catalog, optional): The data catalog to search in. If None, open the default catalog.
+    Parameters
+    ----------
+    variable_id : str
+        The variable ID to search for.
+    frequency : str
+        The frequency to search for.
+    driving_source_id : str, optional
+        The driving source ID to search for. Defaults to "ERA5".
+    add_fx : bool or list of str, optional
+        Whether to add fixed variables (e.g., "areacella", "sftlf"). Defaults to None.
+    catalog : intake.catalog, optional
+        The data catalog to search in. If None, the default catalog is opened.
+    **kwargs : dict
+        Additional arguments passed to the catalog search.
 
-    Returns:
-    intake.catalog: The filtered data catalog.
+    Returns
+    -------
+    intake.catalog
+        The filtered data catalog.
     """
     if add_fx is None:
         add_fx = "areacella"
@@ -73,18 +94,29 @@ def get_source_collection(
     return subset
 
 
-def open_and_sort(catalog, merge_fx=False, concat=False, time_range="auto"):
+def open_and_sort(
+    catalog, merge_fx=False, concat=False, time_range="auto", apply_fixes=False
+):
     """
     Convert the catalog to a dictionary of xarray datasets, sort them by source_id, and optionally merge or concatenate the datasets.
 
-    Parameters:
-    catalog (intake.catalog): The data catalog to convert and sort.
-    merge (bool, optional): Whether to merge the datasets for each source_id. Defaults to None.
-    concat (bool, optional): Whether to concatenate the datasets along the source_id dimension. Defaults to False.
-    time_range (slice or str, optional): The time range to subset the datasets. Defaults to "auto".
+    Parameters
+    ----------
+    catalog : intake.catalog
+        The data catalog to convert and sort.
+    merge_fx : bool, optional
+        Whether to merge the datasets for each source_id. Defaults to False.
+    concat : bool, optional
+        Whether to concatenate the datasets along the source_id dimension. Defaults to False.
+    time_range : slice or str, optional
+        The time range to subset the datasets. Defaults to "auto".
+    apply_fixes : bool, optional
+        Whether to apply fixes to the datasets. Defaults to False.
 
-    Returns:
-    dict or xarray.Dataset: A dictionary of sorted (and optionally merged) xarray datasets, or a concatenated xarray.Dataset.
+    Returns
+    -------
+    dict or xarray.Dataset
+        A dictionary of sorted (and optionally merged) xarray datasets, or a concatenated xarray.Dataset.
     """
     if concat is True and not merge_fx:
         merge_fx = True
@@ -93,15 +125,26 @@ def open_and_sort(catalog, merge_fx=False, concat=False, time_range="auto"):
         time_range = time_range_default
 
     dsets = catalog.to_dataset_dict(xarray_open_kwargs=xarray_open_kwargs)
+
     for iid, ds in dsets.items():
         dsets[iid] = xr.decode_cf(ds, decode_coords="all")
 
     print(f"Found {len(dsets)} datasets")
 
-    if time_range is not None:
-        for iid, ds in dsets.items():
-            if "time" in ds.dims:
-                dsets[iid] = ds.sel(time=time_range)
+    fixed_dsets = {}
+
+    for iid, ds in dsets.items():
+        if "time" in ds.dims:
+            fixed_dsets[iid] = ds.sel(time=time_range)
+        if apply_fixes:
+            try:
+                fixed_dsets[iid] = check_and_fix(ds)
+            except FixException as e:
+                print(f"Fix failed for {iid}: {e}")
+                print(f"Dataset {iid} will be ignored...")
+                continue
+
+    dsets = fixed_dsets
 
     if merge_fx is True:
         id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
@@ -126,7 +169,7 @@ def open_and_sort(catalog, merge_fx=False, concat=False, time_range="auto"):
         ids = list(dsets.keys())
         concat_dim = xr.DataArray(ids, dims="iid", name="iid")
         return xr.concat(
-            list(sorted.values()),
+            list(dsets.values()),
             dim=concat_dim,
             compat="override",
             coords="minimal",
@@ -136,8 +179,27 @@ def open_and_sort(catalog, merge_fx=False, concat=False, time_range="auto"):
 
 
 def open_datasets(variables, frequency="mon", mask=True, add_missing_bounds=True):
+    """
+    Open datasets for the specified variables and frequency, optionally applying masks and adding missing bounds.
+
+    Parameters
+    ----------
+    variables : list of str
+        The variables to open.
+    frequency : str, optional
+        The frequency of the datasets. Defaults to "mon".
+    mask : bool, optional
+        Whether to apply masks using "sftlf". Defaults to True.
+    add_missing_bounds : bool, optional
+        Whether to add missing bounds to the datasets. Defaults to True.
+
+    Returns
+    -------
+    dict
+        A dictionary of xarray datasets.
+    """
     catalog = get_source_collection(variables, frequency, add_fx=["areacella", "sftlf"])
-    dsets = open_and_sort(catalog, merge=True)
+    dsets = open_and_sort(catalog, merge_fx=True)
     if mask is True:
         for ds in dsets.values():
             mask_with_sftlf(ds)
