@@ -11,9 +11,15 @@ from .fix import check_and_fix, FixException
 # do not decode coords by default since open_mfdataset might lose encoding
 # see, e.g., https://github.com/pydata/xarray/issues/2436#issuecomment-449737841
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": None, "chunks": {}}
+xarray_combine_by_coords_kwargs = {
+    "compat": "override",
+    "join": "override",
+    "combine_attrs": "override",
+    "coords": "minimal",
+}
 
 # default time range for the evaluation
-time_range_default = slice("1979", "2020")
+time_range_default = slice("1980", "2020")
 
 xr.set_options(keep_attrs=True)
 
@@ -124,7 +130,11 @@ def open_and_sort(
     if time_range == "auto":
         time_range = time_range_default
 
-    dsets = catalog.to_dataset_dict(xarray_open_kwargs=xarray_open_kwargs)
+    # open datasets
+    dsets = catalog.to_dataset_dict(
+        xarray_open_kwargs=xarray_open_kwargs,
+        xarray_combine_by_coords_kwargs=xarray_combine_by_coords_kwargs,
+    )
 
     for iid, ds in dsets.items():
         print("decoding dataset", iid)
@@ -140,20 +150,21 @@ def open_and_sort(
 
             print(f"Found {len(dsets)} datasets")
 
-    fixed_dsets = {}
+    if time_range:
+        for iid, ds in dsets.items():
+            if "time" in ds.dims:
+                dsets[iid] = ds.sel(time=time_range)
 
-    for iid, ds in dsets.items():
-        if "time" in ds.dims:
-            fixed_dsets[iid] = ds.sel(time=time_range)
-        if apply_fixes:
+    if apply_fixes:
+        fixed = {}
+        for iid, ds in dsets.items():
             try:
-                fixed_dsets[iid] = check_and_fix(ds, iid)
+                fixed[iid] = check_and_fix(ds, iid)
             except FixException as e:
                 print(f"Fix failed for {iid}: {e}")
                 print(f"Dataset {iid} will be ignored...")
                 continue
-
-    dsets = fixed_dsets
+        dsets = fixed
 
     if merge_fx is True:
         id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
