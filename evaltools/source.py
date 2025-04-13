@@ -13,7 +13,7 @@ from .fix import check_and_fix, FixException
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": None, "chunks": {}}
 xarray_combine_by_coords_kwargs = {
     "compat": "override",
-    "join": "override",
+    #  "join": "override", this does not work if time axis if different variables have differen size (e.g. CCLM6-0-1-URB-ESG')
     "combine_attrs": "override",
     "coords": "minimal",
 }
@@ -74,6 +74,9 @@ def get_source_collection(
     intake.catalog
         The filtered data catalog.
     """
+    require_all_on = None
+    if "source_id" not in kwargs:
+        require_all_on = ["source_id"]
     if add_fx is None:
         add_fx = "areacella"
     if catalog is None:
@@ -82,12 +85,14 @@ def get_source_collection(
         variable_id=variable_id,
         frequency=frequency,
         driving_source_id=driving_source_id,
-        require_all_on=["source_id"],
+        require_all_on=require_all_on,
         **kwargs,
     )
     source_ids = list(subset.df.source_id.unique())
     print(f"Found: {source_ids} for variables: {variable_id}")
     if add_fx:
+        if "source_id" in kwargs:
+            del kwargs["source_id"]
         if add_fx is True:
             fx = catalog.search(source_id=source_ids, frequency="fx", **kwargs)
         else:
