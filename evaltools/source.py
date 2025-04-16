@@ -139,6 +139,7 @@ def open_and_sort(
     dsets = catalog.to_dataset_dict(
         xarray_open_kwargs=xarray_open_kwargs,
         xarray_combine_by_coords_kwargs=xarray_combine_by_coords_kwargs,
+        skip_on_error=True,
     )
 
     for iid, ds in dsets.items():
