@@ -1,4 +1,5 @@
 import cf_xarray as cfxr  # noqa
+import cordex as cx
 import warnings
 
 grid_mapping_varname = "crs"
@@ -41,11 +42,37 @@ def check_grid_mapping(ds, iid=None):
         "rotated_latitude_longitude",
         "lambert_conformal_conic",
     ]:
-        warnings.warn(f"Grid mapping name {grid_mapping_name} is not supported")
-        raise FixException(f"Grid mapping name {grid_mapping_name} is not supported")
+        warnings.warn(
+            f"Grid mapping name {grid_mapping_name} is not supported for {iid}"
+        )
+        raise FixException(
+            f"Grid mapping name {grid_mapping_name} is not supported for {iid}"
+        )
     if grid_mapping_varname != "crs":
-        print(f"Renaming grid mapping variable {grid_mapping_varname} to 'crs'")
+        print(
+            f"Renaming grid mapping variable {grid_mapping_varname} to 'crs' for {iid}"
+        )
         ds = update_grid_mapping_varname(ds)
+    if grid_mapping_name == "rotated_latitude_longitude":
+        # check if attributes are set correctly
+        domain_id = ds.cx.domain_id
+        domain_info = cx.domain_info(domain_id)
+        pollon = ds.cf["grid_mapping"].attrs.get("grid_north_pole_longitude")
+        pollat = ds.cf["grid_mapping"].attrs.get("grid_north_pole_latitude")
+        if pollon != domain_info["pollon"]:
+            warnings.warn(
+                f"Grid north pole longitude {pollon} is not set to {domain_info['pollon']} for {domain_id} and {iid}."
+            )
+            ds.cf["grid_mapping"].attrs["grid_north_pole_longitude"] = domain_info[
+                "pollon"
+            ]
+        if pollat != domain_info["pollat"]:
+            warnings.warn(
+                f"Grid north pole latitude {pollat} is not set to {domain_info['pollat']} for {domain_id} and {iid}."
+            )
+            ds.cf["grid_mapping"].attrs["grid_north_pole_latitude"] = domain_info[
+                "pollat"
+            ]
     return ds
 
 
