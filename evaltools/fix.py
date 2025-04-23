@@ -59,20 +59,10 @@ def check_grid_mapping(ds, iid=None):
         domain_info = cx.domain_info(domain_id)
         pollon = ds.cf["grid_mapping"].attrs.get("grid_north_pole_longitude")
         pollat = ds.cf["grid_mapping"].attrs.get("grid_north_pole_latitude")
-        if pollon != domain_info["pollon"]:
-            warnings.warn(
-                f"Grid north pole longitude {pollon} is not set to {domain_info['pollon']} for {domain_id} and {iid}."
-            )
-            ds.cf["grid_mapping"].attrs["grid_north_pole_longitude"] = domain_info[
-                "pollon"
-            ]
-        if pollat != domain_info["pollat"]:
-            warnings.warn(
-                f"Grid north pole latitude {pollat} is not set to {domain_info['pollat']} for {domain_id} and {iid}."
-            )
-            ds.cf["grid_mapping"].attrs["grid_north_pole_latitude"] = domain_info[
-                "pollat"
-            ]
+        if pollon != domain_info["pollon"] or pollat != domain_info["pollat"]:
+            message = f"Grid mapping has ({pollon}, {pollat}) which is inconsistent with ({domain_info['pollon']}, {domain_info['pollat']}) for {domain_id} and {iid}."
+            warnings.warn(message)
+            raise FixException(message)
     return ds
 
 
