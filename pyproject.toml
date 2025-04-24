@@ -1,11 +1,9 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "evaltools"
-version = "0.1.0"
-dynamic = ["dependencies"]
+dynamic = ["version", "dependencies"]
+
+[project.urls]
+repository = "https://github.com/euro-cordex/evaltools.git"
 
 [tool.setuptools]
 packages = ["evaltools"]
@@ -16,3 +14,10 @@ dependencies = {file = ["requirements.txt"]}
 [tool.pytest]
 python_files = "test_*.py"
 testpaths = ["evaltools/tests"]
+
+[build-system]
+requires = [
+    "setuptools>=42",
+    "setuptools-scm>=7",
+]
+build-backend = "setuptools.build_meta"
