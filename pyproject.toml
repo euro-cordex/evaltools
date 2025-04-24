@@ -5,8 +5,20 @@ dynamic = ["version", "dependencies"]
 [project.urls]
 repository = "https://github.com/euro-cordex/evaltools.git"
 
+[build-system]
+requires = [
+    "setuptools>=42",
+    "setuptools-scm>=7",
+    "setuptools_scm_git_archive",
+]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools]
 packages = ["evaltools"]
+
+[tool.setuptools_scm]
+fallback_version = "999"
+version_scheme = "no-guess-dev"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
@@ -14,10 +26,3 @@ dependencies = {file = ["requirements.txt"]}
 [tool.pytest]
 python_files = "test_*.py"
 testpaths = ["evaltools/tests"]
-
-[build-system]
-requires = [
-    "setuptools>=42",
-    "setuptools-scm>=7",
-]
-build-backend = "setuptools.build_meta"
