@@ -25,19 +25,43 @@ def update_grid_mapping_varname(ds, varname="crs"):
     return ds
 
 
+def check_grid_mapping_duplicates(ds):
+    """drop duplicates of grid mapping variables and rename to 'crs'"""
+    try:
+        ds.cf["grid_mapping"].name
+        return ds
+    except KeyError as e:
+        warnings.warn(e)
+        grid_mapping_varnames = list(ds.cf[["grid_mapping"]].data_vars)
+        if len(grid_mapping_varnames) > 1:
+            warnings.warn(
+                f"Found multiple grid mapping variables {grid_mapping_varnames}"
+            )
+        if "crs" in grid_mapping_varnames:
+            varname = "crs"
+        else:
+            varname = grid_mapping_varnames[0]
+        warnings.warn(
+            f"Using {varname} as the grid mapping variable name. Please check the dataset."
+        )
+        grid_mapping_varnames.remove(varname)
+        return ds.drop_vars(grid_mapping_varnames).rename({varname: "crs"})
+
+
 def check_grid_mapping(ds, iid=None):
+
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")  # Catch all warnings
-        grid_mapping_name = ds.cf["grid_mapping"].attrs.get(
-            "grid_mapping_name"
-        )  # Call the function
+        ds = check_grid_mapping_duplicates(ds)
 
         # Check if any warnings were raised
         if w:
             for warning in w:
                 print(f"Warning for {iid}: {warning.message}")
 
-    grid_mapping_varname = ds.cf["grid_mapping"].name
+    grid_mapping_var = ds.cf["grid_mapping"]
+    grid_mapping_name = grid_mapping_var.attrs["grid_mapping_name"]
+
     if grid_mapping_name not in [
         "rotated_latitude_longitude",
         "lambert_conformal_conic",
@@ -57,8 +81,8 @@ def check_grid_mapping(ds, iid=None):
         # check if attributes are set correctly
         domain_id = ds.cx.domain_id
         domain_info = cx.domain_info(domain_id)
-        pollon = ds.cf["grid_mapping"].attrs.get("grid_north_pole_longitude")
-        pollat = ds.cf["grid_mapping"].attrs.get("grid_north_pole_latitude")
+        pollon = grid_mapping_var.attrs.get("grid_north_pole_longitude")
+        pollat = grid_mapping_var.attrs.get("grid_north_pole_latitude")
         if pollon != domain_info["pollon"] or pollat != domain_info["pollat"]:
             message = f"Grid mapping has ({pollon}, {pollat}) which is inconsistent with ({domain_info['pollon']}, {domain_info['pollat']}) for {domain_id} and {iid}."
             warnings.warn(message)
