@@ -9,6 +9,7 @@ repository = "https://github.com/euro-cordex/evaltools.git"
 requires = [
     "setuptools>=42",
     "setuptools-scm>=7",
+    "setuptools_scm_git_archive",
 ]
 build-backend = "setuptools.build_meta"
 
