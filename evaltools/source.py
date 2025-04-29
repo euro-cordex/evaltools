@@ -180,8 +180,16 @@ def open_and_sort(
         # Merge
         for iid, ds in dsets.items():
             attrs = iid_to_dict(iid, id_attrs)
+
             if attrs[freq] != "fx":
-                fx_iid = dict_to_iid(attrs | {"frequency": "fx"})
+                fx_attrs = attrs.copy()
+                if (
+                    fx_attrs["driving_variant_label"] == "r1i1p1"
+                    and dict_to_iid(fx_attrs | {"frequency": "fx"}) not in dsets
+                ):
+                    # quick hack since CMIP5 fx datasets sometimes have ensemble="r0i0p0"
+                    fx_attrs["driving_variant_label"] = "r0i0p0"
+                fx_iid = dict_to_iid(fx_attrs | {"frequency": "fx"})
                 if fx_iid in dsets:
                     print(f"merging {iid} with {fx_iid}")
                     dsets_merged[iid] = xr.merge(
@@ -190,6 +198,8 @@ def open_and_sort(
                         join="override",
                         combine_attrs="override",
                     )
+                else:
+                    print(f"fx dataset not found for {iid}")
         dsets = dsets_merged
     if concat is True:
         ids = list(dsets.keys())
