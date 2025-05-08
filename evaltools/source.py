@@ -3,7 +3,7 @@ import intake
 import pandas as pd
 import warnings
 
-from .utils import iid_to_dict, dict_to_iid
+from .utils import iid_to_dict
 from .eval import mask_with_sftlf, add_bounds
 from .fix import check_and_fix, FixException
 
@@ -182,15 +182,22 @@ def open_and_sort(
             attrs = iid_to_dict(iid, id_attrs)
 
             if attrs[freq] != "fx":
-                fx_attrs = attrs.copy()
-                if (
-                    fx_attrs["driving_variant_label"] == "r1i1p1"
-                    and dict_to_iid(fx_attrs | {"frequency": "fx"}) not in dsets
-                ):
-                    # quick hack since CMIP5 fx datasets sometimes have ensemble="r0i0p0"
-                    fx_attrs["driving_variant_label"] = "r0i0p0"
-                fx_iid = dict_to_iid(fx_attrs | {"frequency": "fx"})
-                if fx_iid in dsets:
+                # check if fx dataset exists
+                # ignore version and driving_variant_label when looking for fx dataset
+                fx_attrs = {
+                    k: v
+                    for k, v in attrs.items()
+                    if k not in ["driving_variant_label", "version"]
+                }
+                fx_attrs["frequency"] = "fx"
+                fx_iid = None
+                # print(f"looking for fx dataset: {fx_iid}")
+                for iid2 in dsets.keys():
+                    attrs2 = iid_to_dict(iid2, id_attrs)
+                    if all(item in attrs2.items() for item in fx_attrs.items()):
+                        fx_iid = iid2
+                        break
+                if fx_iid:
                     print(f"merging {iid} with {fx_iid}")
                     dsets_merged[iid] = xr.merge(
                         [ds, dsets[fx_iid]],
