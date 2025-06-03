@@ -46,7 +46,7 @@ def open_catalog(url=None):
 def get_source_collection(
     variable_id,
     frequency,
-    driving_source_id="ERA5",
+    # driving_source_id="ERA5",
     add_fx=None,
     catalog=None,
     **kwargs,
@@ -60,8 +60,6 @@ def get_source_collection(
         The variable ID to search for.
     frequency : str
         The frequency to search for.
-    driving_source_id : str, optional
-        The driving source ID to search for. Defaults to "ERA5".
     add_fx : bool or list of str, optional
         Whether to add fixed variables (e.g., "areacella", "sftlf"). Defaults to None.
     catalog : intake.catalog, optional
@@ -84,7 +82,7 @@ def get_source_collection(
     subset = catalog.search(
         variable_id=variable_id,
         frequency=frequency,
-        driving_source_id=driving_source_id,
+        # driving_source_id=driving_source_id,
         require_all_on=require_all_on,
         **kwargs,
     )
@@ -141,7 +139,7 @@ def open_and_sort(
         xarray_combine_by_coords_kwargs=xarray_combine_by_coords_kwargs,
         skip_on_error=True,
     )
-
+    # return dsets
     for iid, ds in dsets.items():
         print("decoding dataset", iid)
         # Check for warnings
