@@ -40,6 +40,8 @@ def open_catalog(url=None):
     """
     if url is None:
         url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/main/CORDEX-CMIP6.json"
+        # url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/catalog/CORDEX-CMIP6.json"
+
     return intake.open_esm_datastore(url)
 
 
@@ -73,8 +75,8 @@ def get_source_collection(
         The filtered data catalog.
     """
     require_all_on = None
-    if "source_id" not in kwargs:
-        require_all_on = ["source_id"]
+    # if "source_id" not in kwargs:
+    #    require_all_on = ["source_id"]
     if add_fx is None:
         add_fx = "areacella"
     if catalog is None:
@@ -87,7 +89,7 @@ def get_source_collection(
         **kwargs,
     )
     source_ids = list(subset.df.source_id.unique())
-    print(f"Found: {source_ids} for variables: {variable_id}")
+    print(f"Found {len(source_ids)} datasets for variables {variable_id}: {source_ids}")
     if add_fx:
         if "source_id" in kwargs:
             del kwargs["source_id"]
@@ -197,6 +199,7 @@ def open_and_sort(
                         break
                 if fx_iid:
                     print(f"merging {iid} with {fx_iid}")
+                    # print(ds, dsets[fx_iid])
                     dsets_merged[iid] = xr.merge(
                         [ds, dsets[fx_iid]],
                         compat="override",
