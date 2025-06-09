@@ -13,7 +13,7 @@ from .fix import check_and_fix, FixException
 xarray_open_kwargs = {"use_cftime": True, "decode_coords": None, "chunks": {}}
 xarray_combine_by_coords_kwargs = {
     "compat": "override",
-    #  "join": "override", this does not work if time axis if different variables have differen size (e.g. CCLM6-0-1-URB-ESG')
+    "join": "override",  # this does not work if time axis has different variables have differen size (e.g. CCLM6-0-1-URB-ESG')
     "combine_attrs": "override",
     "coords": "minimal",
 }
@@ -42,6 +42,7 @@ def open_catalog(url=None):
         url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/main/CORDEX-CMIP6.json"
         # url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/catalog/CORDEX-CMIP6.json"
 
+    print(f"Opening catalog from {url}")
     return intake.open_esm_datastore(url)
 
 
