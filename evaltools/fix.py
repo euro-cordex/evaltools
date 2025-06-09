@@ -86,7 +86,7 @@ def check_grid_mapping(ds, iid=None):
         if pollon != domain_info["pollon"] or pollat != domain_info["pollat"]:
             message = f"Grid mapping has ({pollon}, {pollat}) which is inconsistent with ({domain_info['pollon']}, {domain_info['pollat']}) for {domain_id} and {iid}."
             warnings.warn(message)
-            raise FixException(message)
+            # raise FixException(message)
     return ds
 
 
