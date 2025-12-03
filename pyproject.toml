@@ -9,7 +9,8 @@ repository = "https://github.com/euro-cordex/evaltools.git"
 dev = [
     "pytest",
     "black",
-    "isort"
+    "isort",
+    "polars<1.34"
 ]
 
 [build-system]
