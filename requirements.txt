@@ -1,2 +1,6 @@
 numpy
 pandas
+intake-esm
+py-cordex
+aiohttp
+requests
