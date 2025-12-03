@@ -22,6 +22,8 @@ jobs:
       - name: Import evaltools
         run: |
           python -c "import evaltools"
+      - name: curl
+        run: curl -I https://euro-cordex.s3.amazonaws.com/catalog/CORDEX-CMIP6-JSC.json
       - name: Run tests
         timeout-minutes: 5
         run: python -u -m pytest
