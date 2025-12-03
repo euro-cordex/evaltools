@@ -6,7 +6,7 @@ python tools for evaluating CORDEX datasets
 
 Create a new environment, e.g.,
 ```
-conda create -n evaltools python=3.10
+conda create -n evaltools python
 ```
 and install this code using:
 ```
