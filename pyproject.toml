@@ -5,6 +5,14 @@ dynamic = ["version", "dependencies"]
 [project.urls]
 repository = "https://github.com/euro-cordex/evaltools.git"
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "polars<1.33" # https://github.com/intake/intake-esm/issues/744
+]
+
 [build-system]
 requires = [
     "setuptools>=42",
@@ -24,5 +32,5 @@ version_scheme = "no-guess-dev"
 dependencies = {file = ["requirements.txt"]}
 
 [tool.pytest]
-python_files = "test_*.py"
+python_files = ["test_*.py"]
 testpaths = ["evaltools/tests"]

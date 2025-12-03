@@ -1,4 +1,5 @@
-# from .. import add_one
+from ..source import get_source_collection
+
 #
 #
 # @pytest.mark.parametrize("x, y", [(1, 2), (2, 3), (3, 4)])
@@ -6,5 +7,5 @@
 #    assert y == add_one(x)
 
 
-def test_evaltools():
-    pass
+def test_source_collection():
+    get_source_collection(["tas", "pr"], frequency="mon", driving_source_id="ERA5")

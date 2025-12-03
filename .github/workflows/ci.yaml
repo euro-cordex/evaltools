@@ -7,6 +7,7 @@ jobs:
 
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["pypy3.10", "3.9", "3.10", "3.11", "3.12", "3.13"]
 
@@ -18,7 +19,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install evaltools
         run: |
-          python -m pip install -e .
+          python -m pip install .[dev]
       - name: Import evaltools
         run: |
           python -c "import evaltools"
+      - name: curl
+        run: curl -I https://euro-cordex.s3.amazonaws.com/catalog/CORDEX-CMIP6-JSC.json
+      - name: Run tests
+        timeout-minutes: 5
+        run: python -u -m pytest
