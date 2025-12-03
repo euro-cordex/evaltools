@@ -10,7 +10,7 @@ dev = [
     "pytest",
     "black",
     "isort",
-    "polars<1.34"
+    "polars<1.33"
 ]
 
 [build-system]
