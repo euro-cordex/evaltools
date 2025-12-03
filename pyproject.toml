@@ -10,7 +10,7 @@ dev = [
     "pytest",
     "black",
     "isort",
-    "polars<1.33"
+    "polars<1.33" # https://github.com/intake/intake-esm/issues/744
 ]
 
 [build-system]
