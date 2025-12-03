@@ -39,7 +39,8 @@ def open_catalog(url=None):
         The opened data catalog.
     """
     if url is None:
-        url = "https://raw.githubusercontent.com/euro-cordex/jsc-cordex-catalog/refs/heads/main/CORDEX-CMIP6-JSC.json"
+        url = "https://euro-cordex.s3.eu-central-1.amazonaws.com/catalog/CORDEX-CMIP6-JSC.json"
+        # url = "https://raw.githubusercontent.com/euro-cordex/jsc-cordex-catalog/refs/heads/main/CORDEX-CMIP6-JSC.json"
         # url = "https://raw.githubusercontent.com/euro-cordex/joint-evaluation/refs/heads/catalog/CORDEX-CMIP6.json"
 
     print(f"Opening catalog from {url}")
