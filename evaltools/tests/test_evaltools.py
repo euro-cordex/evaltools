@@ -1,4 +1,4 @@
-from ..source import get_source_collection, open_and_sort
+from ..source import get_source_collection
 
 #
 #
