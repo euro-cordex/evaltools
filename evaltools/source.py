@@ -158,11 +158,6 @@ def open_and_sort(
 
             print(f"Found {len(dsets)} datasets")
 
-    if time_range:
-        for iid, ds in dsets.items():
-            if "time" in ds.dims:
-                dsets[iid] = ds.sel(time=time_range)
-
     if apply_fixes:
         fixed = {}
         for iid, ds in dsets.items():
@@ -173,6 +168,11 @@ def open_and_sort(
                 print(f"Dataset {iid} will be ignored...")
                 continue
         dsets = fixed
+
+    if time_range:
+        for iid, ds in dsets.items():
+            if "time" in ds.dims and ds.time.size > 1:
+                dsets[iid] = ds.sel(time=time_range)
 
     if merge_fx is True:
         id_attrs = catalog.esmcat.aggregation_control.groupby_attrs
@@ -202,12 +202,16 @@ def open_and_sort(
                 if fx_iid:
                     print(f"merging {iid} with {fx_iid}")
                     # print(ds, dsets[fx_iid])
-                    dsets_merged[iid] = xr.merge(
-                        [ds, dsets[fx_iid]],
-                        compat="override",
-                        join="override",
-                        combine_attrs="override",
-                    )
+                    try:
+                        dsets_merged[iid] = xr.merge(
+                            [ds, dsets[fx_iid].squeeze(dim="time", drop=True)],
+                            compat="override",
+                            join="override",
+                            combine_attrs="override",
+                        )
+                    except Exception as e:
+                        print(f"merging failed for {iid} and {fx_iid}: {e}")
+                        dsets_merged[iid] = ds
                 else:
                     print(f"fx dataset not found for {iid}")
         dsets = dsets_merged
