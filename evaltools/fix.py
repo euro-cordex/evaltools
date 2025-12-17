@@ -90,8 +90,22 @@ def check_grid_mapping(ds, iid=None):
     return ds
 
 
+def check_time(ds, iid=None):
+    if "time" in ds.coords and ds.attrs.get("frequency") == "fx":
+        warnings.warn(f"fx variable should not contain time dimension: {iid}")
+        warnings.warn(f"Trying to drop time dimension from fx variable: {iid}")
+        try:
+            ds = ds.squeeze(dim="time", drop=True)
+        except Exception as e:
+            warnings.warn(
+                f"Failed to drop time dimension from fx variable: {iid}. Error: {e}"
+            )
+    return ds
+
+
 def check_and_fix(ds, iid=None):
     ds = ds.copy()
     # Check if the grid mapping variable is named 'crs'
     ds = check_grid_mapping(ds, iid)
+    ds = check_time(ds, iid)
     return ds
