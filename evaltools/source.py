@@ -204,7 +204,7 @@ def open_and_sort(
                     # print(ds, dsets[fx_iid])
                     try:
                         dsets_merged[iid] = xr.merge(
-                            [ds, dsets[fx_iid].squeeze(dim="time", drop=True)],
+                            [ds, dsets[fx_iid]],
                             compat="override",
                             join="override",
                             combine_attrs="override",
