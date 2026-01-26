@@ -1,6 +1,5 @@
 from collections import defaultdict
 
-
 default_attrs = [
     "project_id",
     "domain_id",
