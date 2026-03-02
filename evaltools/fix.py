@@ -158,7 +158,7 @@ def check_and_fix_basic_coordinates(ds, iid=None):
 
 def check_and_fix(ds, iid=None):
     ds = ds.copy()
-    ds = check_and_fix_basic_coordinates(ds, iid)
     ds = check_and_fix_grid_mapping(ds, iid)
+    ds = check_and_fix_basic_coordinates(ds, iid)
     ds = check_and_fix_time(ds, iid)
     return ds
