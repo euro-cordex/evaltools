@@ -50,7 +50,6 @@ def open_catalog(url=None):
 def get_source_collection(
     variable_id,
     frequency,
-    # driving_source_id="ERA5",
     add_fx=None,
     catalog=None,
     **kwargs,
@@ -91,7 +90,9 @@ def get_source_collection(
         **kwargs,
     )
     source_ids = list(subset.df.source_id.unique())
-    print(f"Found {len(source_ids)} datasets for variables {variable_id}: {source_ids}")
+    print(
+        f"Found {len(source_ids)} source ids for variables {variable_id}: {source_ids}"
+    )
     if add_fx:
         if "source_id" in kwargs:
             del kwargs["source_id"]
