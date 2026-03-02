@@ -2,7 +2,7 @@ import cf_xarray as cfxr  # noqa
 import cordex as cx
 import warnings
 
-grid_mapping_varname = "crs"
+grid_mapping_varname_default = "crs"
 
 
 class FixException(Exception):
@@ -48,7 +48,7 @@ def check_grid_mapping_duplicates(ds):
         return ds.drop_vars(grid_mapping_varnames).rename({varname: "crs"})
 
 
-def check_grid_mapping(ds, iid=None):
+def check_and_fix_grid_mapping(ds, iid=None):
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")  # Catch all warnings
@@ -61,7 +61,7 @@ def check_grid_mapping(ds, iid=None):
 
     grid_mapping_var = ds.cf["grid_mapping"]
     grid_mapping_name = grid_mapping_var.attrs["grid_mapping_name"]
-
+    # print(f"Checking grid mapping for dataset {iid}: {grid_mapping_name}")
     if grid_mapping_name not in [
         "rotated_latitude_longitude",
         "lambert_conformal_conic",
@@ -72,14 +72,19 @@ def check_grid_mapping(ds, iid=None):
         raise FixException(
             f"Grid mapping name {grid_mapping_name} is not supported for {iid}"
         )
-    if grid_mapping_varname != "crs":
+    if grid_mapping_var.name != grid_mapping_varname_default:
         print(
-            f"Renaming grid mapping variable {grid_mapping_varname} to 'crs' for {iid}"
+            f"Renaming grid mapping variable {grid_mapping_var.name} to '{grid_mapping_varname_default}' for {iid}"
         )
         ds = update_grid_mapping_varname(ds)
     if grid_mapping_name == "rotated_latitude_longitude":
         # check if attributes are set correctly
-        domain_id = ds.cx.domain_id
+        try:
+            domain_id = ds.cx.domain_id
+        except Exception as e:
+            message = f"Failed to get domain_id from dataset {iid}. Error: {e}"
+            warnings.warn(f"{message}")
+            return ds  # default to EUR-12
         domain_info = cx.domain_info(domain_id)
         pollon = grid_mapping_var.attrs.get("grid_north_pole_longitude")
         pollat = grid_mapping_var.attrs.get("grid_north_pole_latitude")
@@ -90,7 +95,7 @@ def check_grid_mapping(ds, iid=None):
     return ds
 
 
-def check_time(ds, iid=None):
+def check_and_fix_time(ds, iid=None):
     if "time" in ds.coords and ds.attrs.get("frequency") == "fx":
         warnings.warn(f"fx variable should not contain time dimension: {iid}")
         warnings.warn(f"Trying to drop time dimension from fx variable: {iid}")
@@ -103,9 +108,57 @@ def check_time(ds, iid=None):
     return ds
 
 
+def check_and_fix_basic_coordinates(ds, iid=None):
+    ds = ds.cf.guess_coord_axis(verbose=False)
+    try:
+        X = ds.cf["X"]
+        Y = ds.cf["Y"]
+    except KeyError as e:
+        warnings.warn(f"Failed to get X and Y coordinates for {iid}. Error: {e}")
+        return ds
+    if X.ndim != 1 or Y.ndim != 1:
+        warnings.warn(f"Coordinates X and Y should be 1D: {iid}")
+        raise FixException(f"Coordinates X and Y should be 1D: {iid}")
+    try:
+        lon = ds.cf["longitude"]
+        lat = ds.cf["latitude"]
+    except KeyError as e:
+        warnings.warn(
+            f"Failed to get longitude and latitude coordinates for {iid}. Error: {e}"
+        )
+        return ds
+    if lon.ndim != 2 or lat.ndim != 2:
+        warnings.warn(f"Coordinates longitude and latitude should be 2D: {iid}")
+        raise FixException(f"Coordinates longitude and latitude should be 2D: {iid}")
+
+    grid_mapping_var = ds.cf["grid_mapping"]
+    grid_mapping_name = grid_mapping_var.attrs["grid_mapping_name"]
+
+    if grid_mapping_name == "rotated_latitude_longitude":
+        if X.name != "rlon" or Y.name != "rlat":
+            warnings.warn(
+                f"Renaming X and Y axis to be named rlon and rlat for rotated_latitude_longitude grid mapping: {iid}"
+            )
+            ds = ds.rename({X.name: "rlon", Y.name: "rlat"})
+    elif grid_mapping_name == "lambert_conformal_conic":
+        if X.name != "x" or Y.name != "y":
+            warnings.warn(
+                f"Renaming X and Y axis to be named x and y for lambert_conformal_conic grid mapping: {iid}"
+            )
+            ds = ds.rename({X.name: "x", Y.name: "y"})
+
+    if lon.name != "lon" or lat.name != "lat":
+        warnings.warn(
+            f"Renaming coordinates longitude and latitude to be named lon and lat: {iid}"
+        )
+        ds = ds.rename({lon.name: "lon", lat.name: "lat"})
+
+    return ds
+
+
 def check_and_fix(ds, iid=None):
     ds = ds.copy()
-    # Check if the grid mapping variable is named 'crs'
-    ds = check_grid_mapping(ds, iid)
-    ds = check_time(ds, iid)
+    ds = check_and_fix_basic_coordinates(ds, iid)
+    ds = check_and_fix_grid_mapping(ds, iid)
+    ds = check_and_fix_time(ds, iid)
     return ds
