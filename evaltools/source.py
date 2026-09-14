@@ -1,11 +1,12 @@
-import xarray as xr
-import intake
-import pandas as pd
 import warnings
 
+import intake
+import pandas as pd
+import xarray as xr
+
+from .eval import add_bounds, mask_with_sftlf
+from .fix import FixException, check_and_fix
 from .utils import iid_to_dict
-from .eval import mask_with_sftlf, add_bounds
-from .fix import check_and_fix, FixException
 
 # we use cftime for time handling
 # do not decode coords by default since open_mfdataset might lose encoding
@@ -94,8 +95,7 @@ def get_source_collection(
         f"Found {len(source_ids)} source ids for variables {variable_id}: {source_ids}"
     )
     if add_fx:
-        if "source_id" in kwargs:
-            del kwargs["source_id"]
+        kwargs.pop("source_id", None)
         if add_fx is True:
             fx = catalog.search(source_id=source_ids, frequency="fx", **kwargs)
         else:
