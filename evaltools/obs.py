@@ -1,6 +1,7 @@
-import xarray as xr
-import numpy as np
 from os import path as op
+
+import numpy as np
+import xarray as xr
 
 eobs_mapping = {
     "tg": "tas",
