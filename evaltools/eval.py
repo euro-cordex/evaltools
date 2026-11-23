@@ -1,8 +1,9 @@
+from warnings import warn
+
+import cf_xarray as cfxr
+import cordex as cx
 import numpy as np
 import xarray as xr
-import cordex as cx
-import cf_xarray as cfxr
-from warnings import warn
 
 
 def regional_mean(ds, regions=None, weights=None):
